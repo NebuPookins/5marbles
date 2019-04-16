@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+    <style type="text/css">
+      #histogram-card tr td:first-child {
+        width: 6em;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.min.js"  integrity="sha256-k9RyZhvMj2bg0fd8L3IE41t0HpTXnivMoePN/Ksq250=" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Five Colored Marbles</h1>
+      <h2>Problem Statement</h2>
+      <p>Let's say you have a jar into which you can place marbles that each
+      have a color and a number associated with them. Someone is count up from
+      1, 2, 3, ... up to some maximum number N and for each number they count,
+      they place five marbles into the jar with the specific colors of red,
+      white, black, green and blue.</p>
+      <p>So for example, when that person counts "1", they place a marble
+      labeled "1 red", a marble labeled "1 white", another labeled "1 black",
+      "1 green" and "1 blue". Then, when the person counts "2", they place a
+      "2 red", "2 white", "2 black", "2 green" and "2 blue" into the jar.</p>
+      <p>You want to empty the jar, but you must follow a very specific rule to
+      do so. You pull out a marble at random. If the marble is red, then you've
+      "solved" the associated number. For example, if you pull out the marble
+      labeled "42 red", you've "solved" the number 42. You can discard that red
+      marble.</p>
+      <p>If you pull out any non-red marble, you can only discard that marble if
+      you've solved its corresponding number. For example, if you pull out the
+      marble labeled "16 green", you can only discard it if you've already
+      solved 16 (i.e. if you've already seen and discarded the "16 red" marble).
+      Otherwise, you must put the marble back into the jar, shuffle the jar, and
+      draw another marble at random and try again.</p>
+      <p>For any given value of N (the maximum number your opponent is counting
+      up to), what's the distribution of marble-draws that you'd have to do
+      before you empty the jar?</p>
+      <h2>Code</h2>
+      <p>We first set up some infrastructure code:</p>
+      <script class="pretty-me" type="text/javascript">
+        /**
+         * Inserts 5N marbles into the array: 0 red, 0 white, 0 black, 0 green,
+         * 0 blue, 1 red, 1 white, 1 black, 1 green, 1 blue, ..., N-1 red, N-1
+         * white, N-1 black, N-1 green and N-1 blue.
+         *
+         * @param {Object[]} jar the jar into which we'll insert the marbles.
+         * @param {Number} jar[].num the number associated with the marble, e.g. 42.
+         * @param {String} jar[].color the color associated with the marble (e.g. "red").
+         * @param {Number} N the number of distinct numbers to use to label the marbles.
+         */
+        function insertMarbles(jar, N) {
+          for (let i = 0; i < N; i++) {
+            ["red", "white", "black", "green", "blue"].forEach((color) => {
+              jar.push({ num: i, color: color});
+            });
+          }
+        }
+
+        /**
+         * Returns a random index into the jar array, indicating a randomly
+         * selected marble.
+         * 
+         * @param {Object[]} jar the jar from which we'll pick a marble.
+         * @return {Number} the index of the selected marble.
+         */
+        function getRandomMarbleIndex(jar) {
+          return Math.floor(Math.random() * jar.length);
+        }
+
+        /**
+         * Attempts to draw a marble and discard it, depending on what our list
+         * of solved numbers is. May mutate the jar and may mutate the solved
+         * list.
+         *
+         * @param {Object[]} jar
+         * @param {boolean[]} solvedList
+         * @return {String} a description of what was done.
+         */
+        function drawMarble(jar, solvedList) {
+          let marbleIndex = getRandomMarbleIndex(jar);
+          let marble = jar[marbleIndex];
+          if (marble.color === "red") {
+            jar.splice(marbleIndex, 1);
+            solvedList[marble.num] = true;
+            return `Drew ${marble.num} red. Discarded it, and added ${marble.num} to solved list.`;
+          } else {
+            if (solvedList[marble.num] === true) {
+              jar.splice(marbleIndex, 1);
+              return `Drew "${marble.num} ${marble.color}". ${marble.num} is on the solved list, so discarded it.`;
+            } else {
+              return `Drew "${marble.num} ${marble.color}". ${marble.num} is not on the solved list, so returned it to the jar.`;
+            }
+          }
+        }
+      </script>
+      <p>Now we can set up a jar with N = 3, and then draw from it 5 times to
+      see what happens:</p>
+      <div class="card">
+        <div class="card-header">Example 1</div>
+        <div class="card-body">
+          <script class="pretty-me" type="text/javascript">
+            function example1() {
+              let N = 3;
+              let jar = [];
+              let solvedList = [];
+              let whatHappened = [];
+              insertMarbles(jar, N);
+              for (let i = 0; i < 5; i++) {
+                whatHappened.push(drawMarble(jar, solvedList));
+              }
+              whatHappened.push(`Jar contains ${jar.length} marbles.`)
+              return whatHappened;
+            }
+          </script>
+        </div>
+        <div id="example1-result" class="card-body">
+        </div>
+        <script type="text/javascript">
+          $(() => {
+            let whatHappened = example1();
+            let $example1Result = $('#example1-result');
+            let $ol = $('<ol>');
+            whatHappened.forEach((element) => {
+              let $li = $('<li>');
+              $li.text(element);
+              $ol.append($li);
+            });
+            $example1Result.append($ol);
+          });
+        </script>
+      </div>
+      <p>We can then add a function that initializes a jar for some N, and then
+      count how many draws was necessary to empty it.</p>
+      <script class="pretty-me" type="text/javascript">
+        function countDrawsToEmpty(N) {
+          let jar = [];
+          let solvedList = [];
+          let draws = 0;
+          insertMarbles(jar, N);
+          while (jar.length > 0) {
+            drawMarble(jar, solvedList);
+            draws++;
+          }
+          return draws;
+        }
+      </script>
+      <p>We can then invoke this a couple of times for N = 3, and see what sort
+      of figures we get back:</p>
+      <div class="card">
+        <div class="card-header">Example 2</div>
+        <div class="card-body">
+          <script class="pretty-me" type="text/javascript">
+            function example2() {
+              let drawsNeeded = [];
+              for (let i = 0; i < 5; i++) {
+                drawsNeeded.push(countDrawsToEmpty(3));
+              }
+              return drawsNeeded;
+            }
+          </script>
+        </div>
+        <div id="example2-result" class="card-body">
+        </div>
+        <script type="text/javascript">
+          $(() => {
+            let whatHappened = example2();
+            let $example2Result = $('#example2-result');
+            $example2Result.text(whatHappened);
+          });
+        </script>
+      </div>
+      <p>We can then look into running the function thousands of time and
+      drawing a histogram of the number of draws required for given value of N
+      to get an idea of how changing N changes the distribution:</p>
+      <script class="pretty-me" type="text/javascript">
+        function getHistogramOfDrawsFor(N) {
+          let histogram = d3.histogram();
+          let drawsNeeded = [];
+          for (let i = 0; i < 1000; i++) {
+            drawsNeeded.push(countDrawsToEmpty(N));
+          }
+          drawsNeeded.sort();
+          let bins = histogram(drawsNeeded);
+          let maxBinLength = d3.max(bins.map((bin) => bin.length));
+          bins = bins.map((bin) => {
+            return {
+              min: bin.x0,
+              max: bin.x1,
+              rawLength: bin.length,
+              normalizedLength: bin.length * 100 / maxBinLength
+            };
+          });
+          
+          return {
+            bins: bins,
+            mean: d3.mean(drawsNeeded),
+            std: d3.deviation(drawsNeeded),
+            median: d3.quantile(drawsNeeded, 0.5),
+            p90: d3.quantile(drawsNeeded, 0.9)
+          };
+        }
+      </script>
+      <div id="histogram-card" class="card">
+      </div>
+      <script id="histogram-card-template" type="text/x-handlebars-template">
+        <div class="card-header">
+          N = {{N}}
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless table-sm">
+            <tbody>
+              {{#each bins}}
+                <tr>
+                  <td>{{min}} - {{max}}</td>
+                  <td>
+                    <div class="progress">
+                      <div class="progress-bar" style="width: {{normalizedLength}}%;">{{rawLength}}</div>
+                    </div>
+                  </td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+          <ul>
+            <li>Mean: {{mean}}</li>
+            <li>Standard Deviation: {{std}}</li>
+            <li>Median: {{median}}</li>
+            <li>P90: {{p90}}</li>
+          </ul>
+        </div>
+      </script>
+      <script type="text/javascript">
+        $(() => {
+          let template = Handlebars.compile($('#histogram-card-template').html());
+          let $histogramCard = $('#histogram-card');
+          [1, 2, 3, 5, 10, 100].forEach((N) => {
+            let histogramForI = getHistogramOfDrawsFor(N);
+            histogramForI.N = N;
+            $histogramCard.append(template(histogramForI));
+          })
+        });
+      </script>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js" integrity="sha256-coVkbqHWSAomtcPWb3XtrGNqZkue+Eu9X7YxIgZbtmg=" crossorigin="anonymous"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js" integrity="sha256-c2EQzHwTKCtfdEcl8iRBNiIvgrjhHo5x/YpOpJszenc=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.1.2/handlebars.min.js" integrity="sha256-ngJY93C4H39YbmrWhnLzSyiepRuQDVKDNCWO2iyMzFw=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+      $(() => {
+        'use strict';
+        $('script.pretty-me').each((index, element) => {
+          let $element = $(element);
+          let prettyCode = PR.prettyPrintOne($element.text().trimEnd(), 'js', true);
+          let $prettyDiv = $('<pre>');
+          $prettyDiv.addClass('prettyprint');
+          $prettyDiv.addClass('prettyprinted');
+          $prettyDiv.html(prettyCode);
+          $element.after($prettyDiv);
+        });
+      });
+    </script>
+  </body>
+</html>
